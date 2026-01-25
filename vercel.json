@@ -1,9 +1,8 @@
-cd c:\Users\default.DESKTOP-BOAFSGB\Desktop\Thesis lab
-echo {
+{
   "version": 2,
   "builds": [
     {
-      "src": "backend/main.py",
+      "src": "main.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "15mb",
@@ -12,11 +11,11 @@ echo {
     }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/backend/main.py" }
+    { "src": "/(.*)", "dest": "/main.py" }
   ],
   "build": {
     "env": {
-      "PYTHONPATH": "backend"
+      "PYTHONPATH": "."
     }
   }
-} > vercel.json
+}

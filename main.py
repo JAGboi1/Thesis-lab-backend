@@ -28,6 +28,16 @@ app.add_middleware(
 )
 
 
+# Root endpoint
+@app.get("/")
+async def root():
+    """Root endpoint with brief API info"""
+    return {
+        "status": "success",
+        "message": "Ritual Mining API - see /docs for OpenAPI, /health for status",
+    }
+
+
 # ============================================================================
 # PYDANTIC MODELS (Request/Response schemas)
 # ============================================================================
@@ -333,36 +343,58 @@ async def get_miner_reputation(wallet_address: str):
 
 
 # ============================================================================
-# TEST ENDPOINT (Keep for debugging)
+# TEST ENDPOINTS (Keep for debugging)
 # ============================================================================
 
-@app.post("/test-verification")
+@app.get("/debug/tasks")
+async def debug_tasks():
+    try:
+        logger.info("Testing task fetch...")
+        task_service = TaskService()
+        tasks = task_service.get_tasks(limit=5, offset=0)
+        
+        return {
+            "status": "success",
+            "tasks_count": len(tasks),
+            "tasks": tasks
+        }
+    except Exception as e:
+        import traceback
+        error_details = {
+            "status": "error",
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "traceback": traceback.format_exc()
+        }
+        logger.error(f"Debug endpoint error: {error_details}")
+        return error_details
+
+@app.get("/test/verification")
 async def test_verification():
     """Test endpoint to verify Claude verification works"""
-    
     try:
+        test_prompt = "What is the capital of France?"
+        test_answer = "Paris"
+        
+        logger.info(f"Testing verification with prompt: {test_prompt}")
+        
         result = verify_submission(
-            submission_id="test_sub_123",
-            task_id="test_task_456",
-            task_type=TaskType.CLASSIFICATION,
-            task_instructions={
-                "prompt": "Is this text about dogs or cats?",
-                "options": ["dogs", "cats"]
-            },
-            miner_output="dogs",
-            verification_criteria={
-                "correct_answer": "dogs",
-                "scoring": "Check if answer matches correct_answer"
-            }
+            task_type=TaskType.EVALUATION,
+            prompt=test_prompt,
+            submission=test_answer,
+            criteria={"requires": "exact match to 'Paris'"}
         )
         
         return {
             "status": "success",
-            "verification": result.to_dict()
+            "test_prompt": test_prompt,
+            "test_answer": test_answer,
+            "verification_result": result.dict()
         }
-    
+        
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        logger.error(f"Verification test failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Verification test failed: {str(e)}"
+        )
