@@ -176,8 +176,8 @@ async def get_task(task_id: str):
 async def list_tasks(limit: int = 50, offset: int = 0):
     """List all active tasks"""
     try:
-        task_service = TaskService()
-        tasks = task_service.get_tasks(limit=limit, offset=offset)
+        # Using the static method directly since list_active_tasks is a static method
+        tasks = TaskService.list_active_tasks(limit=limit, offset=offset)
         
         return {
             "status": "success",
