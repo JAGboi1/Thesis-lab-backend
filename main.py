@@ -176,7 +176,8 @@ async def get_task(task_id: str):
 async def list_tasks(limit: int = 50, offset: int = 0):
     """List all active tasks"""
     try:
-        tasks = TaskService.list_active_tasks(limit=limit, offset=offset)
+        task_service = TaskService()
+        tasks = task_service.get_tasks(limit=limit, offset=offset)
         
         return {
             "status": "success",
@@ -185,6 +186,7 @@ async def list_tasks(limit: int = 50, offset: int = 0):
         }
     
     except Exception as e:
+        logger.error(f"Error listing tasks: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
