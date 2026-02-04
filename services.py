@@ -87,14 +87,26 @@ class TaskService:
                 db.table("tasks")
                 .select("*")
                 .eq("status", "active")
-                .order("created_at", desc=True)
+                .order("created_at", desc=True)  # This should work with the Supabase client
                 .range(offset, offset + limit - 1)
                 .execute()
             )
             return response.data if response.data else []
         except Exception as e:
             logger.error(f"Error listing active tasks: {str(e)}")
-            raise
+            # For debugging, try without the order clause
+            try:
+                response = (
+                    db.table("tasks")
+                    .select("*")
+                    .eq("status", "active")
+                    .range(offset, offset + limit - 1)
+                    .execute()
+                )
+                return response.data if response.data else []
+            except Exception as e2:
+                logger.error(f"Error in fallback task listing: {str(e2)}")
+                raise e  # Raise the original error
     
     @staticmethod
     def update_task_submission_count(task_id: str) -> bool:
