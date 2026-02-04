@@ -7,7 +7,9 @@ import uuid
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from db import get_supabase
+import logging
 
+logger = logging.getLogger(__name__)
 
 class TaskService:
     """Handle all task-related database operations"""
@@ -23,74 +25,96 @@ class TaskService:
         verification_criteria: Dict[str, Any],
         instructions: Dict[str, Any],
         max_submissions: Optional[int] = None,
-        developer_id: Optional[str] = None
+        developer_id: Optional[str] = None,
+        **kwargs
     ) -> Dict[str, Any]:
         """
         Create a new task in database.
         """
-        db = get_supabase()
-        
-        task_id = str(uuid.uuid4())
-        if not developer_id:
-            developer_id = str(uuid.uuid4())
-        
-        task_data = {
-            "id": task_id,
-            "developer_id": developer_id,
-            "title": title,
-            "description": description,
-            "task_type": task_type,
-            "difficulty_level": difficulty_level,
-            "reward_per_submission": reward_per_submission,
-            "total_budget": total_budget,
-            "verification_criteria": verification_criteria,
-            "instructions": instructions,
-            "max_submissions": max_submissions,
-            "status": "active",
-            "current_submissions": 0,
-            "created_at": datetime.utcnow().isoformat()
-        }
-        
-        # Insert into database
-        response = db.table("tasks").insert(task_data).execute()
-        
-        if not response.data:
-            raise Exception("Failed to insert task into database")
+        try:
+            db = get_supabase()
             
-        return response.data[0]
+            task_id = str(uuid.uuid4())
+            if not developer_id:
+                developer_id = str(uuid.uuid4())
+            
+            task_data = {
+                "id": task_id,
+                "developer_id": developer_id,
+                "title": title,
+                "description": description,
+                "task_type": task_type,
+                "difficulty_level": difficulty_level,
+                "reward_per_submission": reward_per_submission,
+                "total_budget": total_budget,
+                "verification_criteria": verification_criteria,
+                "instructions": instructions,
+                "max_submissions": max_submissions,
+                "status": "active",
+                "current_submissions": 0,
+                "created_at": datetime.utcnow().isoformat()
+            }
+            
+            # Insert into database
+            response = db.table("tasks").insert(task_data).execute()
+            
+            if not response.data:
+                raise Exception("Failed to insert task into database")
+                
+            return response.data[0]
+            
+        except Exception as e:
+            logger.error(f"Error creating task: {str(e)}")
+            raise
     
     @staticmethod
     def get_task(task_id: str) -> Optional[Dict[str, Any]]:
         """Get a task by ID"""
-        db = get_supabase()
-        
-        response = db.table("tasks").select("*").eq("id", task_id).execute()
-        
-        return response.data[0] if response.data else None
+        try:
+            db = get_supabase()
+            response = db.table("tasks").select("*").eq("id", task_id).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error getting task {task_id}: {str(e)}")
+            raise
     
     @staticmethod
     def list_active_tasks(limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
-        """List all active tasks"""
-        db = get_supabase()
-        
-        response = db.table("tasks").select("*").eq("status", "active").range(offset, offset + limit).execute()
-        
-        return response.data if response.data else []
+        """List all active tasks with pagination"""
+        try:
+            db = get_supabase()
+            response = (
+                db.table("tasks")
+                .select("*")
+                .eq("status", "active")
+                .order("created_at", desc=True)
+                .range(offset, offset + limit - 1)
+                .execute()
+            )
+            return response.data if response.data else []
+        except Exception as e:
+            logger.error(f"Error listing active tasks: {str(e)}")
+            raise
     
     @staticmethod
-    def update_task_submission_count(task_id: str):
+    def update_task_submission_count(task_id: str) -> bool:
         """Increment submission count for a task"""
-        db = get_supabase()
-        
-        # Get current count
-        task = db.table("tasks").select("current_submissions").eq("id", task_id).execute()
-        if not task.data:
-            return
-        
-        current = task.data[0]["current_submissions"]
-        
-        # Update count
-        db.table("tasks").update({"current_submissions": current + 1}).eq("id", task_id).execute()
+        try:
+            db = get_supabase()
+            
+            # Use Postgres's increment operation
+            response = (
+                db.table("tasks")
+                .update({"current_submissions": db.table("tasks").column("current_submissions") + 1})
+                .eq("id", task_id)
+                .execute()
+            )
+            
+            return bool(response.data)
+            
+        except Exception as e:
+            logger.error(f"Error updating task submission count for {task_id}: {str(e)}")
+            return False
 
 
 class UserService:

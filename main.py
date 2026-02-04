@@ -156,6 +156,7 @@ async def create_task(request: CreateTaskRequest):
 async def get_task(task_id: str):
     """Get details of a specific task"""
     try:
+        # Get task using the static method
         task = TaskService.get_task(task_id)
         
         if not task:
@@ -166,28 +167,33 @@ async def get_task(task_id: str):
             "task": task
         }
     
-    except HTTPException:
-        raise
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = f"Error getting task {task_id}: {str(e)}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 @app.get("/tasks")
 async def list_tasks(limit: int = 50, offset: int = 0):
-    """List all active tasks"""
+    """List all active tasks with pagination"""
     try:
-        # Using the static method directly since list_active_tasks is a static method
+        # Get tasks using the static method
         tasks = TaskService.list_active_tasks(limit=limit, offset=offset)
         
         return {
             "status": "success",
             "tasks": tasks,
-            "total": len(tasks)
+            "total": len(tasks),
+            "limit": limit,
+            "offset": offset
         }
     
     except Exception as e:
-        logger.error(f"Error listing tasks: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = f"Error listing tasks: {str(e)}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 # ============================================================================
@@ -349,16 +355,20 @@ async def get_miner_reputation(wallet_address: str):
 # ============================================================================
 
 @app.get("/debug/tasks")
-async def debug_tasks():
+async def debug_tasks(limit: int = 5, offset: int = 0):
+    """Debug endpoint to test task fetching"""
     try:
-        logger.info("Testing task fetch...")
-        task_service = TaskService()
-        tasks = task_service.get_tasks(limit=5, offset=0)
+        logger.info(f"Debug: Fetching {limit} tasks with offset {offset}")
+        
+        # Get tasks using the static method
+        tasks = TaskService.list_active_tasks(limit=limit, offset=offset)
         
         return {
             "status": "success",
             "tasks_count": len(tasks),
-            "tasks": tasks
+            "tasks": tasks,
+            "limit": limit,
+            "offset": offset
         }
     except Exception as e:
         import traceback
