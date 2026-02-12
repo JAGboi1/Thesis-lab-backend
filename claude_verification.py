@@ -60,10 +60,10 @@ class ClaudeVerificationClient:
         Initialize Claude verification client.
         """
         if api_key is None:
-            api_key = os.getenv("CLAUDE_API_KEY")
+            api_key = os.getenv("ANTHROPIC_API_KEY")
         
         if not api_key:
-            raise ValueError("CLAUDE_API_KEY not set in environment or passed as argument")
+            raise ValueError("ANTHROPIC_API_KEY not set in environment or passed as argument")
         
         self.client = Anthropic(api_key=api_key)
         self.model = "claude-3-5-sonnet-20241022"

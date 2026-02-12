@@ -110,22 +110,27 @@ class TaskService:
     
     @staticmethod
     def update_task_submission_count(task_id: str) -> bool:
-        """Increment submission count for a task"""
+        """Increment the submission count for a task"""
         try:
             db = get_supabase()
+            # Get current submission count
+            task = db.table("tasks").select("current_submissions").eq("id", task_id).execute()
+            if not task.data:
+                logger.error(f"Task {task_id} not found")
+                return False
+                
+            # Increment the count
+            new_count = task.data[0]["current_submissions"] + 1
             
-            # Use Postgres's increment operation
-            response = (
-                db.table("tasks")
-                .update({"current_submissions": db.table("tasks").column("current_submissions") + 1})
-                .eq("id", task_id)
+            # Update with new count
+            response = db.table("tasks")\
+                .update({"current_submissions": new_count})\
+                .eq("id", task_id)\
                 .execute()
-            )
-            
+                
             return bool(response.data)
-            
         except Exception as e:
-            logger.error(f"Error updating task submission count for {task_id}: {str(e)}")
+            logger.error(f"Error updating submission count for task {task_id}: {str(e)}")
             return False
 
 
